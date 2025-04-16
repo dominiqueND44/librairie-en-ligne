@@ -1,3 +1,4 @@
+# Utilise une image PHP officielle avec Composer
 FROM php:8.2-fpm
 
 # Installe les dépendances système
@@ -8,30 +9,32 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libxml2-dev \
     zip \
-    unzip
+    unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Installe les extensions PHP nécessaires
+# Installe les extensions PHP nécessaires à Laravel
 RUN docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd
+
+# Met à jour Composer
+RUN composer self-update
 
 # Installe Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Dossier de l'app
+# Crée un dossier pour l’application
 WORKDIR /var/www
 
-# Copier uniquement composer pour installer plus vite avec cache Docker
-COPY composer.lock composer.json ./
-
-# Installer les dépendances Laravel
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Copier tout le code
+# Copie les fichiers du projet dans le conteneur
 COPY . .
 
-# Permissions Laravel
-RUN mkdir -p storage/framework/cache/data && \
-    chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# Change les permissions des fichiers pour éviter les problèmes
+RUN chown -R www-data:www-data /var/www
 
+# Installe les dépendances Laravel
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# Expose le port 9000 (PHP-FPM)
 EXPOSE 9000
 
+# Commande par défaut
 CMD ["php-fpm"]
