@@ -1,37 +1,34 @@
+# Étape 1 : image officielle PHP avec FPM
 FROM php:8.2-fpm
 
-# Installe les dépendances système
+# Étape 2 : Installer les dépendances système
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    zip \
+    unzip \
     libpng-dev \
     libonig-dev \
     libxml2-dev \
-    zip \
-    unzip
+    && docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd
 
-# Installe les extensions PHP nécessaires
-RUN docker-php-ext-install pdo pdo_mysql mbstring exif pcntl bcmath gd
-
-# Installe Composer
+# Étape 3 : Installer Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Dossier de l'app
+# Étape 4 : Créer le dossier de l'application
 WORKDIR /var/www
 
-# Copier uniquement composer pour installer plus vite avec cache Docker
-COPY composer.lock composer.json ./
-
-# Installer les dépendances Laravel
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
-
-# Copier tout le code
+# Étape 5 : Copier les fichiers du projet dans le conteneur
 COPY . .
 
-# Permissions Laravel
-RUN mkdir -p storage/framework/cache/data && \
-    chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
+# Étape 6 : Donner les permissions
+RUN chown -R www-data:www-data /var/www
 
+# Étape 7 : Installer les dépendances Laravel
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# Expose le port 9000 (utilisé par php-fpm)
 EXPOSE 9000
 
+# Commande de démarrage par défaut
 CMD ["php-fpm"]
